@@ -106,8 +106,8 @@ struct pt_regs {
 #define ARM_cpsr  pstate
 #define ARM_r0    regs[0]
 #define ARM_lr    regs[30]
+#define  CPSR_T_MASK  (1u << 5)
 #endif
-
 
 void ptrace_attach(pid_t target)
 {
