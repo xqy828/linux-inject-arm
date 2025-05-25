@@ -11,6 +11,8 @@
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 
+#include "ptrace.h"
+
 #define MAX_STR   (1024)
 #define libc_name = "libc.so.6"
 
@@ -187,10 +189,17 @@ static unsigned long int  getTargetProcessLibcFuncAddr(pid_t pid,const char* lib
     return targetProcessLibcFuncAddr;
 }
 
-static int injectProcess(pid_t targetpid,const char* libcname,const char* InjectlibPath)
+/**********************************************************************
+targetpid: target task pid
+libcname: glibc name  libc.so.6
+InjectlibPath: dynamic-link library want to inject
+function_name: name of the function to be called in the InjectlibPath
+params:Inputs for function_name calls in InjectlibPath
+************************************************************************/
+static int injectProcess(pid_t targetpid,const char* libcname,const char* InjectlibPath,const char* function_name,const char* params)
 {
     int rc = -1;
-    long parameters[10];
+    unsigned long int parameters[10];
     unsigned long int mmap_addr = 0;
     unsigned long int mmap_base = 0;
     unsigned long int dlopenAddr = 0;
@@ -198,12 +207,14 @@ static int injectProcess(pid_t targetpid,const char* libcname,const char* Inject
     unsigned long int dlcloseAddr = 0;
     unsigned long int dlerrorAddr = 0;
     long sohandle = 0;
-
+    unsigned char errorbuf[128] = {0};
+    unsigned char* errorrc = NULL;
+    unsigned long int hook_entry_addr = 0;
     struct pt_regs regs, original_regs;
     ptinf("[+]:%s Injecting process: %d\n",__func__,targetpid);
 
     mmap_addr = getTargetProcessLibcFuncAddr(targetpid,libcname,(unsigned long int)mmap);
-    printf("[+]:%s Target process mmap address: %x\n", __func__,mmap_addr);
+    printf("[+]:%s Target process mmap address: %lx\n", __func__,mmap_addr);
     
     ptrace_attach(targetpid);
     ptrace_getregs(targetpid,&regs);
@@ -235,36 +246,45 @@ static int injectProcess(pid_t targetpid,const char* libcname,const char* Inject
     parameters[0] = map_base;
     parameters[1] = RTLD_NOW| RTLD_GLOBAL;
 
-    if (ptrace_call_wrapper(target_pid, "dlopen", dlopen_addr, parameters, 2, &regs) == -1)
+    if (ptrace_call_wrapper(target_pid, "__libc_dlopen_mode", dlopenAddr, parameters, 2, &regs) == -1)
     {
         return -1;
     }
 
     sohandle = ptrace_retval(&regs);
+    if(sohandle == 0)
+    {
+        if(ptrace_call_wrapper(target_pid,"__libc_dlerror",dlerrorAddr,0,0,&regs)== -1)
+        {
+            return  -1;
+        }
+        ptrace_readdata(target_pid,errorrc,errorbuf,128);
+    }
+
 
 #define FUNCTION_NAME_ADDR_OFFSET       0x100
     ptrace_writedata(target_pid, map_base + FUNCTION_NAME_ADDR_OFFSET, function_name, strlen(function_name) + 1);
     parameters[0] = sohandle;
     parameters[1] = map_base + FUNCTION_NAME_ADDR_OFFSET;
 
-    if (ptrace_call_wrapper(target_pid, "dlsym", dlsym_addr, parameters, 2, &regs) == -1)
+    if (ptrace_call_wrapper(target_pid, "__libc_dlsym", dlsymAddr, parameters, 2, &regs) == -1)
         goto exit;
 
-    void * hook_entry_addr = ptrace_retval(&regs);
-    DEBUG_PRINT("hook_entry_addr = %p\n", hook_entry_addr);
+    hook_entry_addr = ptrace_retval(&regs);
+    printf("hook_entry_addr = %lx\n", hook_entry_addr);
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x200
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, param, strlen(param) + 1);
+    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, params, strlen(params) + 1);
     parameters[0] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
 
-    if (ptrace_call_wrapper(target_pid, "hook_entry", hook_entry_addr, parameters, 1, &regs) == -1)
+    if (ptrace_call_wrapper(target_pid,function_name, hook_entry_addr, parameters, 1, &regs) == -1)
         goto exit;
 
     printf("Press enter to dlclose and detach\n");
     getchar();
     parameters[0] = sohandle;
 
-    if (ptrace_call_wrapper(target_pid, "dlclose", dlclose, parameters, 1, &regs) == -1)
+    if (ptrace_call_wrapper(target_pid, "__libc_dlclose", dlcloseAddr, parameters, 1, &regs) == -1)
         goto exit;
 
     /* restore */
@@ -322,7 +342,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    rc = injectProcess(TargetProcessPid,libc_name,InjectlibPath);
+    rc = injectProcess(TargetProcessPid,libc_name,InjectlibPath,"hook_entry","hello hook");
 
     return  0;
 }

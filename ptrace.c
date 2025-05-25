@@ -1,15 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <asm/user.h>
-#include <asm/ptrace.h>
-#include <sys/ptrace.h>
-#include <sys/wait.h>
-#include <sys/mman.h>
-#include <dlfcn.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <string.h>
 
+#include "ptrace.h"
 
 #if __REG_DOC__
 /*regs armv8a & armv7a*/
@@ -216,7 +206,7 @@ static int ptrace_readdata(pid_t target_pid,unsigned char* src,unsigned char*buf
     return  0;
 }
 
-static int ptrace_writedata(pid_t target_pid,unsigned char* dest,unsigned char* data,size_t size)
+int ptrace_writedata(pid_t target_pid,unsigned char* dest,unsigned char* data,size_t size)
 {
     long  i = 0,j= 0,remain = 0;
     unsigned char * local_addr = NULL;
@@ -249,71 +239,6 @@ static int ptrace_writedata(pid_t target_pid,unsigned char* dest,unsigned char* 
     return  0;
 }
 
-static int ptrace_call(pid_t target_pid,unsigned  long int  addr,long *params,int num_params,struct pt_regs * arm_regs)
-{
-    int i = 0;
-    int stat = 0;
-#if defined(__arm__)
-    int num_param_registers = 4;//r0 -r3
-#elif defined(__aarch64__)
-    int num_param_registers = 8;//x0-x7
-#endif
-    for(i = 0;i < num_param_registers && i < num_params;i++)
-    {
-        arm_regs->regs[i] = params[i];
-    }
-
-    if(i < num_params)
-    {
-        arm_regs->ARM_sp -=(num_params - i) * sizeof(long);
-        ptrace_writedata(target_pid,(unsigned char*)arm_regs->sp,(unsigned char*)&params[i],(num_params - i) * sizeof(long));
-    }
-    arm_regs->ARM_pc = addr;
-    if(arm_regs->ARM_pc & 0x1)
-    {
-        /*thumb*/
-        arm_regs->ARM_pc &=(~0x1u);
-        arm_regs->ARM_cpsr |= CPSR_T_MASK;
-    }
-    else
-    {
-        /*arm*/
-        arm_regs->ARM_cpsr &= ~CPSR_T_MASK;
-    }
-    arm_regs->ARM_lr = 0;// retun to null,Trigger program to generate SIGSEGV signal
-    if (ptrace_setregs(pid, arm_regs) == -1 || ptrace_continue(pid) == -1) 
-    {
-        printf("error\n");
-        return -1;
-    }
-    waitpid(pid, &stat, WUNTRACED);
-    while (stat != 0xb7f)
-    {
-        if (ptrace_continue(pid) == -1) 
-        {
-            printf("error\n");  
-            return -1;  
-        }
-        waitpid(pid, &stat, WUNTRACED);
-    }
-    return  0;
-}
-
-void ptrace_call_wrapper(pid_t target_pid, const char * func_name, (unsigned long int)func_addr, long * parameters, int param_num, struct pt_regs * regs)
-{
-    printf("[+]:%s Calling %s in target process.\n", __func__,func_name);
-    if (ptrace_call(target_pid, (unsigned long int)func_addr, parameters, param_num, regs) == -1)
-    {
-        exit(1);
-    }
-    if (ptrace_getregs(target_pid, regs) == -1)
-    {
-        exit(1);
-    }
-    printf("[+] Target process returned from %s, return value=%x, pc=%x \n",
-                func_name, ptrace_retval(regs), ptrace_ip(regs));
-}
-
 long ptrace_retval(struct pt_regs * regs)
 {
 #if defined(__arm__) || defined(__aarch64__)
@@ -334,6 +259,73 @@ long ptrace_ip(struct pt_regs * regs)
 #else
 #error "Not supported"    
 #endif
+}
+
+static int ptrace_call(pid_t target_pid,unsigned long int  addr,unsigned long int *params,int num_params,struct pt_regs * arm_regs)
+{
+    int i = 0;
+    int stat = 0;
+#if defined(__arm__)
+    int num_param_registers = 4;//r0 -r3
+#elif defined(__aarch64__)
+    int num_param_registers = 8;//x0-x7
+#endif
+    for(i = 0;i < num_param_registers && i < num_params;i++)
+    {
+        arm_regs->regs[i] = params[i];
+    }
+
+    if(i < num_params)
+    {
+        arm_regs->ARM_sp -=(num_params - i) * sizeof(long);
+        ptrace_writedata(target_pid,(unsigned char*)arm_regs->sp,(unsigned char*)&params[i],(num_params - i) * sizeof(long));
+    }
+    arm_regs->ARM_pc = addr;
+#if defined(__arm__)
+    if(arm_regs->ARM_pc & 0x1)
+    {
+        /*thumb*/
+        arm_regs->ARM_pc &=(~0x1u);
+        arm_regs->ARM_cpsr |= CPSR_T_MASK;
+    }
+    else
+    {
+        /*arm*/
+        arm_regs->ARM_cpsr &= ~CPSR_T_MASK;
+    }
+#endif    
+    arm_regs->ARM_lr = 0;// retun to null,Trigger program to generate SIGSEGV signal
+    if (ptrace_setregs(pid, arm_regs) == -1 || ptrace_continue(pid) == -1) 
+    {
+        printf("error\n");
+        return -1;
+    }
+    waitpid(pid, &stat, WUNTRACED);
+    while (stat != 0xb7f)
+    {
+        if (ptrace_continue(pid) == -1) 
+        {
+            printf("error\n");  
+            return -1;  
+        }
+        waitpid(pid, &stat, WUNTRACED);
+    }
+    return  0;
+}
+
+void ptrace_call_wrapper(pid_t target_pid, const char * func_name, unsigned long int func_addr, unsigned long int* parameters, int param_num, struct pt_regs * regs)
+{
+    printf("[+]:%s Calling %s in target process.\n", __func__,func_name);
+    if (ptrace_call(target_pid, (unsigned long int)func_addr, parameters, param_num, regs) == -1)
+    {
+        exit(1);
+    }
+    if (ptrace_getregs(target_pid, regs) == -1)
+    {
+        exit(1);
+    }
+    printf("[+]:%s Target process returned from %s, return value=%x, pc=%x \n",
+                 __func__,func_name, ptrace_retval(regs), ptrace_ip(regs));
 }
 
 
