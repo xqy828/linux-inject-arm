@@ -38,9 +38,11 @@ INJECT_TOOL_SRC = $(WORK_DIR)/inject-tools/src
 
 
 ifeq ($(PLATFORM),ARM)
-        TOOLS = /opt/arm-gnu-toolchain-13.2.Rel1-x86_64-arm-none-linux-gnueabihf/bin/arm-none-linux-gnueabihf-
+    TOOLS = /opt/arm-gnu-toolchain-13.2.Rel1-x86_64-arm-none-linux-gnueabihf/bin/arm-none-linux-gnueabihf-
 else ifeq ($(PLATFORM),ARM64)
-        TOOLS = /opt/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-
+    TOOLS = /opt/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-
+else 
+	$(error PLATFORM only support ARM & ARM64)
 endif
 
 AS = $(TOOLS)as
@@ -73,6 +75,11 @@ DEMO_LIBRARY_F:= $(DEMO_LIBRARY_OBJS:%.o=%d)
 DEMO_TARGET_OBJS_F :=$(DEMO_TARGET_OBJS:%.o=%d)
 INJECT_TOOL_OBJS_F :=$(INJECT_TOOL_OBJS:%.o=%d)
 
+INJECT_INCLUDES = $(foreach dir, $(INJECT_TOOL_INCLUDE), -I$(dir))
+DEMO_TARGET_INCLUDES = $(foreach dir, $(DEMO_TARGET_INCLUDE), -I$(dir))
+DEMO_LIBRARY_INCLUDES = $(foreach dir, $(DEMO_LIBRARY_INCLUDE), -I$(dir))
+
+
 -include $(DEMO_LIBRARY_F)
 -include $(DEMO_TARGET_OBJS_F)
 -include $(INJECT_TOOL_OBJS_F)
@@ -103,48 +110,48 @@ $(DEMO_TARGET_DIS_NAME):$(DEMO_TARGET_ELF_NAME)
 $(OBJ_DIR)/INJECT_TOOL_DIR/%.o:%.c
 	@echo "COMPILING INJECT TOOL SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	$(CC) $(CFLAGS) $(INJECT_TOOL_INCLUDE) -o $@ -c $^
+	$(CC) $(CFLAGS) $(INJECT_INCLUDES) -o $@ -c $^
 
 $(OBJ_DIR)/INJECT_TOOL_DIR/%.o:%.S
 	@echo "COMPILING INJECT TOOL SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	$(CC) $(CFLAGS) $(INJECT_TOOL_INCLUDE) -o $@ -c $^
+	$(CC) $(CFLAGS) $(INJECT_INCLUDES) -o $@ -c $^
 
 $(OBJ_DIR)/INJECT_TOOL_DIR/%.o:%.s
 	@echo "COMPILING INJECT TOOL SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	$(CC) $(CFLAGS) $(INJECT_TOOL_INCLUDE) -o $@ -c $^
+	$(CC) $(CFLAGS) $(INJECT_INCLUDES) -o $@ -c $^
 #############################################################
 $(OBJ_DIR)/DEMO_TARGET_DIR/%.o:%.c
 	@echo "COMPILING DEMO TARGET SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	@$(CC) $(CFLAGS) $(DEMO_TARGET_INCLUDE) -o $@ -c $^
+	@$(CC) $(CFLAGS) $(DEMO_TARGET_INCLUDES) -o $@ -c $^
 
 $(OBJ_DIR)/DEMO_TARGET_DIR/%.o:%.s
 	@echo "COMPILING  DEMO TARGET SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	@$(CC) $(CFLAGS) $(DEMO_TARGET_INCLUDE) -o $@ -c $^
+	@$(CC) $(CFLAGS) $(DEMO_TARGET_INCLUDES) -o $@ -c $^
 
 $(OBJ_DIR)/DEMO_TARGET_DIR/%.o:%.S
 	@echo "COMPILING DEMO TARGET SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	@$(CC) $(CFLAGS) $(DEMO_TARGET_INCLUDE) -o $@ -c $^
+	@$(CC) $(CFLAGS) $(DEMO_TARGET_INCLUDES) -o $@ -c $^
 #############################################################
 $(OBJ_DIR)/DEMO_LIBRARY_DIR/%.o:%.c
 	@echo "COMPILING DEMO_LIBRARY SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDE) -o $@  -c $^
+	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDES) -o $@  -c $^
 
 $(OBJ_DIR)/DEMO_LIBRARY_DIR/%.o:%.s
 	@echo "COMPILING DEMO_LIBRARY SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDE) -o $@ -c $^
+	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDES) -o $@ -c $^
 
 $(OBJ_DIR)/DEMO_LIBRARY_DIR/%.o:%.S
 	@echo "COMPILING DEMO_LIBRARY SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDE) -o $@ -c $^
+	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDES) -o $@ -c $^
 ###############################################################
 
 clean:
-	rem -rf $(OUTPUT)
+	rm -rf $(OUTPUT)
