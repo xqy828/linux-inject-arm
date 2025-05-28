@@ -7,21 +7,25 @@
 #include <elf.h>
 #include <dirent.h>
 #include <sys/mman.h>
-#include <asm/ptrace.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 
 #include "ptrace.h"
 
 #define MAX_STR   (1024)
-#define libc_name = "libc.so.6"
+#define libc_name  "libc.so.6"
+
+extern void *__libc_dlopen_mode  (const char *__name, int __mode);
+extern void *__libc_dlsym   (void *__map, const char *__name);
+extern int   __libc_dlclose (void *__map);
+extern char *__dlerror (void);
 
 static void usage(char* name)
 {
     printf("usage: %s [-n process-name] [-p pid] [library-to-inject]\n", name);
 }
 
-static int getProcessExebyPid(char * outExe,unsigned int pid)
+int getProcessExebyPid(char * outExe,unsigned int pid)
 {
     char exe[32] = {0};
     int linken = 0;
@@ -54,11 +58,9 @@ static int getProcessExebyPid(char * outExe,unsigned int pid)
     return 0;
 }
 
-static int getProcessPidbyName(const char *name,int *pid)
+int getProcessPidbyName(const char *name,int *pid)
 {
-    FILE *Fp = NULL;
     DIR* dir = NULL;
-    int processPid = -1;
     struct dirent *procDirs;
     int id = -1;
     char* exeName = NULL;
@@ -89,7 +91,7 @@ static int getProcessPidbyName(const char *name,int *pid)
         }
         id = atoi(procDirs->d_name);
         len = 10 + strlen(procDirs->d_name) + 1;// /proc/%s/exe
-        exePath = calloc(linlenken * sizeof(char));
+        exePath = calloc(len,sizeof(char));
         if(exePath == NULL)
         {
             continue;
@@ -124,7 +126,7 @@ static int getProcessPidbyName(const char *name,int *pid)
     return -1;
 }
 
-static unsigned long int getLibcBaseAddr(pid_t pid,const char* library_name)
+unsigned long int getLibcBaseAddr(pid_t pid,const char* library_name)
 {
     unsigned long int start_addr = 0,end_addr = 0;
     unsigned long int  base_addr = 0;
@@ -135,7 +137,7 @@ static unsigned long int getLibcBaseAddr(pid_t pid,const char* library_name)
     if (pid < 0) 
     {
         /* self process */
-        snprintf(filename, sizeof(filename), "/proc/self/maps", pid);
+        snprintf(filename, sizeof(filename), "/proc/self/maps");
     } 
     else 
     {
@@ -153,7 +155,7 @@ static unsigned long int getLibcBaseAddr(pid_t pid,const char* library_name)
     {
         if (strstr(line, library_name) && strstr(line,"r-xp"))
         {
-            if(sscanf(line,"%lx-%lx",%start_addr,%end_addr) == 2)
+            if(sscanf(line,"%lx-%lx",&start_addr,&end_addr) == 2)
             {
                 base_addr = start_addr;
                 break;
@@ -164,7 +166,7 @@ static unsigned long int getLibcBaseAddr(pid_t pid,const char* library_name)
     return base_addr;
 }
 
-static unsigned long int  getTargetProcessLibcFuncAddr(pid_t pid,const char* library_name,unsigned long int localFuncAddr)
+unsigned long int  getTargetProcessLibcFuncAddr(pid_t pid,const char* library_name,unsigned long int localFuncAddr)
 {
     unsigned long int localLibcAddr = 0;
     unsigned long int funcAddrOffset = 0;
@@ -196,12 +198,11 @@ InjectlibPath: dynamic-link library want to inject
 function_name: name of the function to be called in the InjectlibPath
 params:Inputs for function_name calls in InjectlibPath
 ************************************************************************/
-static int injectProcess(pid_t targetpid,const char* libcname,const char* InjectlibPath,const char* function_name,const char* params)
+int injectProcess(pid_t target_pid,const char* libcname,const char* InjectlibPath,const char* function_name,const char* params)
 {
-    int rc = -1;
     unsigned long int parameters[10];
     unsigned long int mmap_addr = 0;
-    unsigned long int mmap_base = 0;
+    unsigned long int map_base = 0;
     unsigned long int dlopenAddr = 0;
     unsigned long int dlsymAddr = 0;
     unsigned long int dlcloseAddr = 0;
@@ -210,14 +211,14 @@ static int injectProcess(pid_t targetpid,const char* libcname,const char* Inject
     unsigned char errorbuf[128] = {0};
     unsigned char* errorrc = NULL;
     unsigned long int hook_entry_addr = 0;
-    struct pt_regs regs, original_regs;
-    ptinf("[+]:%s Injecting process: %d\n",__func__,targetpid);
+    struct user_regs_struct regs, original_regs;
+    printf("[+]:%s Injecting process: %d\n",__func__,target_pid);
 
-    mmap_addr = getTargetProcessLibcFuncAddr(targetpid,libcname,(unsigned long int)mmap);
+    mmap_addr = getTargetProcessLibcFuncAddr(target_pid,libcname,(unsigned long int)mmap);
     printf("[+]:%s Target process mmap address: %lx\n", __func__,mmap_addr);
     
-    ptrace_attach(targetpid);
-    ptrace_getregs(targetpid,&regs);
+    ptrace_attach(target_pid);
+    ptrace_getregs(target_pid,&regs);
     memcpy(&original_regs, &regs, sizeof(regs));// back up regs
 
 
@@ -232,16 +233,16 @@ static int injectProcess(pid_t targetpid,const char* libcname,const char* Inject
     {
         return -1;
     }
-    mmap_base = ptrace_retval(&regs);
+    map_base = ptrace_retval(&regs);
 
-    dlopenAddr = getTargetProcessLibcFuncAddr(targetpid,libcname,(unsigned long int)__libc_dlopen_mode);
-    dlsymAddr = getTargetProcessLibcFuncAddr(targetpid,libcname,(unsigned long int)__libc_dlsym);
+    dlopenAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,(unsigned long int)__libc_dlopen_mode);
+    dlsymAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,(unsigned long int)__libc_dlsym);
     dlcloseAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,(unsigned long int)__libc_dlclose);
-    dlerrorAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,(unsigned long int)__libc_dlerror);
+    dlerrorAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,(unsigned long int)__dlerror);
     printf("[+]:%s Get imports: dlopen: %lx, dlsym: %lx, dlclose: %lx, dlerror: %lx\n",
                 __func__,dlopenAddr, dlsymAddr, dlcloseAddr, dlerrorAddr);
     printf("library path = %s\n", InjectlibPath);
-    ptrace_writedata(target_pid, map_base, InjectlibPath, strlen(InjectlibPath) + 1);
+    ptrace_writedata(target_pid, (unsigned char*)map_base, (unsigned char*)InjectlibPath, strlen(InjectlibPath) + 1);
 
     parameters[0] = map_base;
     parameters[1] = RTLD_NOW| RTLD_GLOBAL;
@@ -254,7 +255,7 @@ static int injectProcess(pid_t targetpid,const char* libcname,const char* Inject
     sohandle = ptrace_retval(&regs);
     if(sohandle == 0)
     {
-        if(ptrace_call_wrapper(target_pid,"__libc_dlerror",dlerrorAddr,0,0,&regs)== -1)
+        if(ptrace_call_wrapper(target_pid,"__dlerror",dlerrorAddr,0,0,&regs)== -1)
         {
             return  -1;
         }
@@ -263,34 +264,38 @@ static int injectProcess(pid_t targetpid,const char* libcname,const char* Inject
 
 
 #define FUNCTION_NAME_ADDR_OFFSET       0x100
-    ptrace_writedata(target_pid, map_base + FUNCTION_NAME_ADDR_OFFSET, function_name, strlen(function_name) + 1);
+    ptrace_writedata(target_pid, (unsigned char *)(map_base + FUNCTION_NAME_ADDR_OFFSET), (unsigned char*)function_name, strlen(function_name) + 1);
     parameters[0] = sohandle;
     parameters[1] = map_base + FUNCTION_NAME_ADDR_OFFSET;
 
     if (ptrace_call_wrapper(target_pid, "__libc_dlsym", dlsymAddr, parameters, 2, &regs) == -1)
-        goto exit;
-
+    {
+        return -1;
+    }
     hook_entry_addr = ptrace_retval(&regs);
     printf("hook_entry_addr = %lx\n", hook_entry_addr);
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x200
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, params, strlen(params) + 1);
+    ptrace_writedata(target_pid, (unsigned char *)(map_base + FUNCTION_PARAM_ADDR_OFFSET), (unsigned char*)params, strlen(params) + 1);
     parameters[0] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
 
     if (ptrace_call_wrapper(target_pid,function_name, hook_entry_addr, parameters, 1, &regs) == -1)
-        goto exit;
+    {
+        return  -1;
+    }
 
     printf("Press enter to dlclose and detach\n");
     getchar();
     parameters[0] = sohandle;
 
     if (ptrace_call_wrapper(target_pid, "__libc_dlclose", dlcloseAddr, parameters, 1, &regs) == -1)
-        goto exit;
+    {
+        return -1;
+    }
 
     /* restore */
     ptrace_setregs(target_pid, &original_regs);
     ptrace_detach(target_pid);
-    rc = 0;
     return  0;
 }
 
@@ -302,7 +307,7 @@ int main(int argc, char** argv)
     char* InjectlibPath = NULL;
     char* TargetProcessName = NULL;
     pid_t TargetProcessPid = -1;
-    int rc = -1；
+    int rc = -1;
     if(argc < 4)
     {
         usage(argv[0]);

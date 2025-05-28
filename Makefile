@@ -1,12 +1,12 @@
 
 ifndef PLATFORM
-	$(error please sepcific PLATFORM (export PLATFORM=ARM / export PLATFORM=ARM64))
+$(error please sepcific PLATFORM (export PLATFORM=ARM / export PLATFORM=ARM64))
 endif
 
 OUTPUT := output
 WORK_DIR := $(shell pwd)
 
-CC_FLAGS += -Wall -Wextra -g 
+CFLAGS_COMMON := -Wall -Wextra -g 
 
 OBJ_DIR = $(OUTPUT)/obj
 
@@ -42,7 +42,7 @@ ifeq ($(PLATFORM),ARM)
 else ifeq ($(PLATFORM),ARM64)
     TOOLS = /opt/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-
 else 
-	$(error PLATFORM only support ARM & ARM64)
+$(error PLATFORM only support ARM & ARM64)
 endif
 
 AS = $(TOOLS)as
@@ -52,7 +52,7 @@ OBJCOPY = $(TOOLS)objcopy
 OBJDUMP = $(TOOLS)objdump
 SIZE = $(TOOLS)size
 
-CFLAGS += $(CC_FLAGS)
+CFLAGS += $(CFLAGS_COMMON)
 LDFLAGS += 
 
 DEMO_LIBRARY_SRCS_C := $(shell find $(DEMO_LIBRARY_SRC) -name '*.c')
@@ -93,14 +93,14 @@ $(DEMO_LIBRARY_NAME):$(DEMO_LIBRARY_OBJS)
 	@echo $(THREADX_LIB) has been created
 ##############################################################
 $(INJECT_ELF_NAME):$(INJECT_TOOL_OBJS)
-	$(LD) $(INJECT_TOOL_OBJS) $(LDFLAGS) -o $@ -Map $(INJECT_MAP_NAME)
+	$(LD) $(INJECT_TOOL_OBJS) $(LDFLAGS) -o $@ -Wl,-Map,$(INJECT_MAP_NAME) -ldl
 	@echo $(INJECT_ELF_NAME) has been created
 $(INJECT_DIS_NAME):$(INJECT_ELF_NAME)
 	@$(OBJDUMP) -h -d $< > $@
 	@echo $(INJECT_DIS_NAME) has been created
 ##############################################################
 $(DEMO_TARGET_ELF_NAME):$(DEMO_TARGET_OBJS)
-	$(LD) $(DEMO_TARGET_OBJS) $(LDFLAGS) -lpthread -o $@ -Map $(DEMO_TARGET_MAP_NAME)
+	$(LD) $(DEMO_TARGET_OBJS) $(LDFLAGS) -o $@ -Wl,-Map,$(DEMO_TARGET_MAP_NAME) -lpthread
 	@echo $(DEMO_TARGET_ELF_NAME) has been created
 $(DEMO_TARGET_DIS_NAME):$(DEMO_TARGET_ELF_NAME)
 	@$(OBJDUMP) -h -d $< > $@
