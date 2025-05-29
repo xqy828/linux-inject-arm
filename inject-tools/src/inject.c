@@ -166,6 +166,27 @@ unsigned long int getLibcBaseAddr(pid_t pid,const char* library_name)
     return base_addr;
 }
 
+unsigned long int getLibcFuncAddr(char* funcName)
+{
+    unsigned long int add = 0;
+    void* selfhandle = NULL; 
+    void* funcAddr  = NULL;
+    selfhandle = dlopen("libc.so.6", RTLD_LAZY);
+    if(selfhandle == NULL)
+    {
+        printf("Error loading libc.so.6: %s\n",dlerror());
+        return  0;
+    }
+	funcAddr = dlsym(selfhandle, funcName);
+    if(funcAddr == NULL)
+    {
+        printf("Error finding cos: %s\n",dlerror());
+        return 0;
+    }
+	return (unsigned long int)funcAddr;
+
+}
+
 unsigned long int  getTargetProcessLibcFuncAddr(pid_t pid,const char* library_name,unsigned long int localFuncAddr)
 {
     unsigned long int localLibcAddr = 0;
@@ -207,6 +228,12 @@ int injectProcess(pid_t target_pid,const char* libcname,const char* InjectlibPat
     unsigned long int dlsymAddr = 0;
     unsigned long int dlcloseAddr = 0;
     unsigned long int dlerrorAddr = 0;
+
+    unsigned long int local_dlopenAddr = 0;
+    unsigned long int local_dlsymAddr = 0;
+    unsigned long int local_dlcloseAddr = 0;
+    unsigned long int local_dlerrorAddr = 0;
+
     long sohandle = 0;
     unsigned char errorbuf[128] = {0};
     unsigned char* errorrc = NULL;
@@ -235,10 +262,15 @@ int injectProcess(pid_t target_pid,const char* libcname,const char* InjectlibPat
     }
     map_base = ptrace_retval(&regs);
 
-    dlopenAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,(unsigned long int)__libc_dlopen_mode);
-    dlsymAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,(unsigned long int)__libc_dlsym);
-    dlcloseAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,(unsigned long int)__libc_dlclose);
-    dlerrorAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,(unsigned long int)__dlerror);
+    local_dlopenAddr = getLibcFuncAddr("__libc_dlopen_mode");
+    local_dlsymAddr = getLibcFuncAddr("__libc_dlsym");
+    local_dlcloseAddr = getLibcFuncAddr("__libc_dlclose");
+    local_dlerrorAddr = getLibcFuncAddr("__dlerror");
+
+    dlopenAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,local_dlopenAddr);
+    dlsymAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,local_dlsymAddr);
+    dlcloseAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,local_dlcloseAddr);
+    dlerrorAddr = getTargetProcessLibcFuncAddr(target_pid,libcname,local_dlerrorAddr);
     printf("[+]:%s Get imports: dlopen: %lx, dlsym: %lx, dlclose: %lx, dlerror: %lx\n",
                 __func__,dlopenAddr, dlsymAddr, dlcloseAddr, dlerrorAddr);
     printf("library path = %s\n", InjectlibPath);
