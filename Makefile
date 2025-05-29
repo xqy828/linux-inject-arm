@@ -89,7 +89,7 @@ DEMO_LIBRARY_INCLUDES = $(foreach dir, $(DEMO_LIBRARY_INCLUDE), -I$(dir))
 all: $(INJECT_ELF_NAME) $(DEMO_TARGET_ELF_NAME) $(DEMO_LIBRARY_NAME)
 ##############################################################
 $(DEMO_LIBRARY_NAME):$(DEMO_LIBRARY_OBJS)
-	$(CC) -shared -fPIC -o $@ $^
+	$(CC) -shared -o $@ $^
 	@echo $(THREADX_LIB) has been created
 ##############################################################
 $(INJECT_ELF_NAME):$(INJECT_TOOL_OBJS)
@@ -140,17 +140,17 @@ $(OBJ_DIR)/DEMO_TARGET_DIR/%.o:%.S
 $(OBJ_DIR)/DEMO_LIBRARY_DIR/%.o:%.c
 	@echo "COMPILING DEMO_LIBRARY SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDES) -o $@  -c $^
+	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDES) -fPIC -o $@  -c $^
 
 $(OBJ_DIR)/DEMO_LIBRARY_DIR/%.o:%.s
 	@echo "COMPILING DEMO_LIBRARY SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDES) -o $@ -c $^
+	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDES) -fPIC -o $@ -c $^
 
 $(OBJ_DIR)/DEMO_LIBRARY_DIR/%.o:%.S
 	@echo "COMPILING DEMO_LIBRARY SOURCE $< TO OBJECT $@"
 	@mkdir -p '$(@D)'
-	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDES) -o $@ -c $^
+	@$(CC) $(CFLAGS) $(DEMO_LIBRARY_INCLUDES) -fPIC -o $@ -c $^
 ###############################################################
 
 clean:

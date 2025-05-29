@@ -168,7 +168,6 @@ unsigned long int getLibcBaseAddr(pid_t pid,const char* library_name)
 
 unsigned long int getLibcFuncAddr(char* funcName)
 {
-    unsigned long int add = 0;
     void* selfhandle = NULL; 
     void* funcAddr  = NULL;
     selfhandle = dlopen("libc.so.6", RTLD_LAZY);
