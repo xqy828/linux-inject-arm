@@ -1,14 +1,22 @@
 # linux-inject-arm
 
-## 介绍
+## Summary
 
-linux inject for arm    
-参考项目：     
-https://github.com/gaffe23/linux-inject/     
-https://github.com/itwenhao123456/-Android-Linux-ARM-Hook     
+**Linux inject for arm**
+A Lightweight Tool for Dynamic Injection of Linux Processes
+This is a dynamic link library injection tool based on the ptrace system call, which supports injecting custom shared libraries (.so files) into the target process at runtime.
+**Core features of the project:**
+1 Cross-glibc version compatibility: automatically adapts to API changes in glibc 2.34+ (e.g. dlopen/dlsym instead of __libc_dlopen_mode).
+2 Native compatibility with ARMv7a/ARMv8a architecture.
+3 Supports specifying the target process by process name or PID.
+**Reference Progject：**
+https://github.com/gaffe23/linux-inject/
+https://github.com/itwenhao123456/-Android-Linux-ARM-Hook
 
-## 使用说明
-### compile 
+## Directions for use
+
+### Compile
+
 ```sh
 make PLATFORM=ARM64 
 make PLATFORM=ARM64 clean
@@ -17,11 +25,20 @@ make PLATFORM=ARM
 make PLATFORM=ARM clean
 ```
 
-./Inject.out -p 44361 ./demo_library.so   
+### Execute
 
-## 测试
-### Raspberrypi 4B   
-#### OS:   
+. /inject -n `<process name>` `<dynamic library path>` # Inject by process name
+or
+. /inject -p `<PID>` `<dynamic library path>` # Inject by PID
+eg:
+./Inject.out -p 44361 ./demo_library.so
+
+## TEST
+
+### Raspberrypi 4B
+
+#### OS:
+
 ```js
 pi@raspberrypi:~ $ uname -a
 Linux raspberrypi 6.6.74+rpt-rpi-v8 #1 SMP PREEMPT Debian 1:6.6.74-1+rpt1 (2025-01-27) aarch64 GNU/Linux
@@ -33,7 +50,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 Written by Roland McGrath and Ulrich Drepper.
 pi@raspberrypi:~ $
 ```
-#### 测试log:   
+
+#### TEST log:
+
 ```js
 pi@raspberrypi:~ $ ./Inject.out -p 44361 ./demo_library.so
 [-[+]-]:main-(00513)]Compiled with glibc: 2.38
@@ -75,8 +94,11 @@ Original function called
 Original function called
 
 ```
+
 ### NXP i.MX93(9352)
-#### OS: 
+
+#### OS:
+
 ```js
 root@myd-lmx9x:~# uname -a
 Linux myd-lmx9x 6.1.55+ga5c552ce6210 #1 SMP PREEMPT Thu Apr 11 02:15:58 UTC 2024 aarch64 GNU/Linux
@@ -98,7 +120,9 @@ root@myd-lmx9x:~#
 root@myd-lmx9x:~#
 
 ```
-#### 测试log
+
+#### TEST log
+
 ```js
 root@myd-lmx9x:~# 
 root@myd-lmx9x:~# ./demo_process.out &
@@ -148,9 +172,3 @@ Original function called
 Original function called
 
 ```
-
-
-
-
-
-
