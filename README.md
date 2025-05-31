@@ -2,16 +2,16 @@
 
 ## Summary
 
-**Linux inject for arm**    
-A Lightweight Tool for Dynamic Injection of Linux Processes     
-This is a dynamic link library injection tool based on the ptrace system call, which supports injecting custom shared libraries (.so files) into the target process at runtime.    
-**Core features of the project:**     
-1 Cross-glibc version compatibility: automatically adapts to API changes in glibc 2.34+ (e.g. dlopen/dlsym instead of __libc_dlopen_mode).    
-2 Native compatibility with ARMv7a/ARMv8a architecture.    
-3 Supports specifying the target process by process name or PID.    
-**Reference Progject：**    
-https://github.com/gaffe23/linux-inject/   
-https://github.com/itwenhao123456/-Android-Linux-ARM-Hook    
+**Linux inject for arm**
+A Lightweight Tool for Dynamic Injection of Linux Processes
+This is a dynamic link library injection tool based on the ptrace system call, which supports injecting custom shared libraries (.so files) into the target process at runtime.
+**Core features of the project:**
+1 Cross-glibc version compatibility,automatically adapts to API changes in glibc 2.34+ (e.g. dlopen/dlsym instead of __libc_dlopen_mode).
+2 Native compatibility with ARMv7a/ARMv8a architecture.
+3 Supports specifying the target process by process name or PID.
+**Reference Progject：**
+https://github.com/gaffe23/linux-inject/
+https://github.com/itwenhao123456/-Android-Linux-ARM-Hook
 
 ## Directions for use
 
