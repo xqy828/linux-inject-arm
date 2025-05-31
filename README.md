@@ -2,12 +2,21 @@
 
 ## 介绍
 
-linux inject for arm
+linux inject for arm    
 参考项目：     
 https://github.com/gaffe23/linux-inject/     
 https://github.com/itwenhao123456/-Android-Linux-ARM-Hook     
 
 ## 使用说明
+### compile 
+```sh
+make PLATFORM=ARM64 
+make PLATFORM=ARM64 clean
+or 
+make PLATFORM=ARM
+make PLATFORM=ARM clean
+```
+
 ./Inject.out -p 44361 ./demo_library.so   
 
 ## 测试
