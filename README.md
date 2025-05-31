@@ -2,8 +2,8 @@
 
 ## Summary
 
-**Linux inject for arm**
-A Lightweight Tool for Dynamic Injection of Linux Processes
+**Linux inject for arm**    
+A Lightweight Tool for Dynamic Injection of Linux Processes     
 This is a dynamic link library injection tool based on the ptrace system call, which supports injecting custom shared libraries (.so files) into the target process at runtime.    
 **Core features of the project:**     
 1 Cross-glibc version compatibility: automatically adapts to API changes in glibc 2.34+ (e.g. dlopen/dlsym instead of __libc_dlopen_mode).    
