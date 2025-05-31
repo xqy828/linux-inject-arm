@@ -20,6 +20,16 @@
 
 typedef struct user_regs_struct user_regs_struct;
 
+#define COLOR_NONE  "\033[0m"
+#define COLOR_RED   "\033[0;31m"
+#define COLOR_GREEN "\033[0;32m"
+#define COLOR_BLUE  "\033[1;34m"
+#define UNUSED_PARA(para)   ((void)(para))
+#define disp(format, ...)  \
+do{\
+    printf("[\033[0;31m-[+]-\033[0m]:%s-(%05d)]"format,__FUNCTION__,__LINE__,##__VA_ARGS__);\
+}while(0)
+
 #if defined __REG_DOC__
 /*regs armv8a & armv7a*/
 ==============armv7a=============
@@ -104,6 +114,22 @@ struct pt_regs {
 #define S_PMR_SAVE 296 /* offsetof(struct pt_regs, pmr_save) */
 #define S_STACKFRAME 304 /* offsetof(struct pt_regs, stackframe) */
 #define PT_REGS_SIZE 336 /* sizeof(struct pt_regs) */
+
+=============================GLIBC AARCH64=========================
+struct user_regs_struct
+{
+  unsigned long long regs[31];
+  unsigned long long sp;
+  unsigned long long pc;
+  unsigned long long pstate;
+};
+
+============================GLIBC ARM===============================
+struct user_regs
+{
+  unsigned long int uregs[18];
+};
+
 #endif
 
 #if defined(__aarch64__)//armv7a compatible with armv8a architecture
