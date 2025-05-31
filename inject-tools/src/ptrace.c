@@ -37,7 +37,7 @@ void ptrace_continue(pid_t target)
     }
 }
 
-void ptrace_getregs(pid_t target, struct user_regs_struct* arm_regs)
+void ptrace_getregs(pid_t target, struct glibc_regs* arm_regs)
 {
 #if defined(__aarch64__)
     struct iovec regIoVec;
@@ -58,7 +58,7 @@ void ptrace_getregs(pid_t target, struct user_regs_struct* arm_regs)
 #endif
 }
 
-void ptrace_setregs(pid_t target, struct user_regs_struct* arm_regs)
+void ptrace_setregs(pid_t target, struct glibc_regs* arm_regs)
 {
 #if defined(__aarch64__)
     struct iovec regIoVec;
@@ -140,7 +140,7 @@ int ptrace_writedata(pid_t target_pid,unsigned char* dest,unsigned char* data,si
     return  0;
 }
 
-unsigned long int ptrace_retval(struct user_regs_struct * regs)
+unsigned long int ptrace_retval(struct glibc_regs * regs)
 {
 #if defined(__arm__) || defined(__aarch64__)
 	return regs->ARM_r0;
@@ -151,7 +151,7 @@ unsigned long int ptrace_retval(struct user_regs_struct * regs)
 #endif
 }
 
-unsigned long int ptrace_ip(struct user_regs_struct * regs)
+unsigned long int ptrace_ip(struct glibc_regs * regs)
 {
 #if defined(__arm__) || defined(__aarch64__)
 	return regs->ARM_pc;
@@ -162,7 +162,7 @@ unsigned long int ptrace_ip(struct user_regs_struct * regs)
 #endif
 }
 
-static int ptrace_call(pid_t target_pid,unsigned long int  addr,unsigned long int *params,int num_params,struct user_regs_struct * arm_regs)
+static int ptrace_call(pid_t target_pid,unsigned long int  addr,unsigned long int *params,int num_params,struct glibc_regs * arm_regs)
 {
     int i = 0;
     int stat = 0;
@@ -179,7 +179,7 @@ static int ptrace_call(pid_t target_pid,unsigned long int  addr,unsigned long in
     if(i < num_params)
     {
         arm_regs->ARM_sp -=(num_params - i) * sizeof(long);
-        ptrace_writedata(target_pid,(unsigned char*)arm_regs->sp,(unsigned char*)&params[i],(num_params - i) * sizeof(long));
+        ptrace_writedata(target_pid,(unsigned char*)arm_regs->ARM_sp,(unsigned char*)&params[i],(num_params - i) * sizeof(long));
     }
     arm_regs->ARM_pc = addr;
 #if defined(__arm__)
@@ -207,7 +207,7 @@ static int ptrace_call(pid_t target_pid,unsigned long int  addr,unsigned long in
     return  0;
 }
 
-int ptrace_call_wrapper(pid_t target_pid, const char * func_name, unsigned long int func_addr, unsigned long int* parameters, int param_num, struct user_regs_struct * regs)
+int ptrace_call_wrapper(pid_t target_pid, const char * func_name, unsigned long int func_addr, unsigned long int* parameters, int param_num, struct glibc_regs * regs)
 {
     disp("Calling %s in target process.\n",func_name);
     if (ptrace_call(target_pid, (unsigned long int)func_addr, parameters, param_num, regs) == -1)

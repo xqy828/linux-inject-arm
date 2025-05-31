@@ -172,3 +172,74 @@ Original function called
 Original function called
 
 ```
+### NXP i.MX 6Quad
+#### OS 
+```js
+[root@imx6q ~]# uname -a
+Linux imx6q 6.5.0 #1 SMP Mon May  5 11:09:19 CST 2025 armv7l GNU/Linux
+[root@imx6q ~]# 
+
+root@imx6q ~]# /lib/libc.so.6 
+GNU C Library (Arm) stable release version 2.37.
+Copyright (C) 2023 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.
+There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.
+Compiled by GNU CC version 12.3.1 20230626.
+libc ABIs: UNIQUE ABSOLUTE
+Minimum supported kernel: 3.2.0
+For bug reporting instructions, please see:
+<https://bugs.linaro.org/>.
+[root@imx6q ~]# 
+```
+#### TEST log
+```js
+[root@imx6q ~]# 
+[root@imx6q ~]# ./demo_process.out &
+[root@imx6q ~]# Original function called
+[root@imx6q ~]# Original function called
+Original function called
+Original function called
+Original function called
+./Inject.out -p 1058 ./demo_library.soOriginal function called
+
+[-[+]-]:main-(00513)]Compiled with glibc: 2.38
+[-[+]-]:main-(00514)]Running on glibc: 2.37
+[-[+]-]:main-(00537)]Target process pid 1058
+[-[+]-]:main-(00545)]Inject library /root/demo_library.so
+[-[+]-]:injectProcess-(00287)]Injecting process: 1058
+[-[+]-]:getTargetProcessLibcFuncAddr-(00245)]local libc.so.6[0xb6e36000], target libc.so.6[0xb6ecf000],funcAddrOffset 705617 target LibcFuncAddr[0xb6f7b451]
+[-[+]-]:injectProcess-(00290)]Target process mmap address: 0xb6f7b451
+[-[+]-]:injectProcess-(00301)]Running GLIBC version: 2.37.0
+[-[+]-]:getTargetProcessLibcFuncAddr-(00245)]local libc.so.6[0xb6e36000], target libc.so.6[0xb6ecf000],funcAddrOffset 370517 target LibcFuncAddr[0xb6f29755]
+[-[+]-]:getTargetProcessLibcFuncAddr-(00245)]local libc.so.6[0xb6e36000], target libc.so.6[0xb6ecf000],funcAddrOffset 370617 target LibcFuncAddr[0xb6f297b9]
+[-[+]-]:getTargetProcessLibcFuncAddr-(00245)]local libc.so.6[0xb6e36000], target libc.so.6[0xb6ecf000],funcAddrOffset 369165 target LibcFuncAddr[0xb6f2920d]
+[-[+]-]:getTargetProcessLibcFuncAddr-(00245)]local libc.so.6[0xb6e36000], target libc.so.6[0xb6ecf000],funcAddrOffset 369213 target LibcFuncAddr[0xb6f2923d]
+[-[+]-]:injectProcess-(00387)]Get imports: dlopen: 0xb6f29755, dlsym: 0xb6f297b9, dlclose: 0xb6f2920d, dlerror: 0xb6f2923d
+[-[+]-]:injectProcess-(00388)]library path = /root/demo_library.so
+[-[+]-]:ptrace_call_wrapper-(00212)]Calling mmap in target process.
+[-[+]-]:ptrace_call_wrapper-(00218)]Target process returned from mmap, return value=b6ecb000, pc=0 
+[-[+]-]:injectProcess-(00407)]Target process after mmap map_base = 0xb6ecb000
+[-[+]-]:ptrace_call_wrapper-(00212)]Calling __libc_dlopen_mode/dlopen in target process.
+Hooked function auto start
+[-[+]-]:ptrace_call_wrapper-(00218)]Target process returned from __libc_dlopen_mode/dlopen, return value=14f21b8, pc=0 
+[-[+]-]:injectProcess-(00435)]"/root/demo_library.so" successfully injected
+[-[+]-]:ptrace_call_wrapper-(00212)]Calling __libc_dlsym/dlsym in target process.
+[-[+]-]:ptrace_call_wrapper-(00218)]Target process returned from __libc_dlsym/dlsym, return value=b6ec8751, pc=0 
+[-[+]-]:injectProcess-(00468)]hook_entry_addr = b6ec8751
+[-[+]-]:ptrace_call_wrapper-(00212)]Calling hook_entry in target process.
+Hook success, pid = 1058
+Hello hello hook
+[-[+]-]:ptrace_call_wrapper-(00218)]Target process returned from hook_entry, return value=0, pc=0 
+[-[+]-]:injectProcess-(00479)]Press enter to dlclose and detach
+
+[-[+]-]:ptrace_call_wrapper-(00212)]Calling __libc_dlclose/dlclose in target process.
+[-[+]-]:ptrace_call_wrapper-(00218)]Target process returned from __libc_dlclose/dlclose, return value=0, pc=0 
+[root@imx6q ~]# 
+[root@imx6q ~]# Original function called
+Original function called
+
+```
+
+
+

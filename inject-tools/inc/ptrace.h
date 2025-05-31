@@ -18,8 +18,6 @@
 #include <string.h>
 #include <errno.h>
 
-typedef struct user_regs_struct user_regs_struct;
-
 #define COLOR_NONE  "\033[0m"
 #define COLOR_RED   "\033[0;31m"
 #define COLOR_GREEN "\033[0;32m"
@@ -133,25 +131,35 @@ struct user_regs
 #endif
 
 #if defined(__aarch64__)//armv7a compatible with armv8a architecture
-#define pt_regs   user_pt_regs
-#define uregs     regs
-#define ARM_pc    pc
-#define ARM_sp    sp
-#define ARM_cpsr  pstate
-#define ARM_r0    regs[0]
-#define ARM_lr    regs[30]
-#define  CPSR_T_MASK  (1u << 5)
+#define ARM_pc        pc
+#define ARM_sp        sp
+#define ARM_r0        regs[0]
+#define ARM_lr        regs[30]
+#define glibc_regs    user_regs_struct
+typedef struct user_regs_struct user_regs_struct;
 #endif
+#if defined(__arm__)
+#define CPSR_T_MASK   (1u << 5)
+#define glibc_regs    user_regs
+#define regs          uregs
+#define ARM_pc        regs[15]
+#define ARM_sp        regs[13]
+#define ARM_r0        regs[0]
+#define ARM_lr        regs[14]
+#define ARM_cpsr      regs[16]
+typedef struct user_regs user_regs;
+#endif
+
 
 
 void ptrace_attach(pid_t target);
 void ptrace_detach(pid_t target);
 void ptrace_continue(pid_t target);
-void ptrace_getregs(pid_t target, struct user_regs_struct* arm_regs);
-void ptrace_setregs(pid_t target, struct user_regs_struct* arm_regs);
+void ptrace_getregs(pid_t target, struct glibc_regs* arm_regs);
+void ptrace_setregs(pid_t target, struct glibc_regs* arm_regs);
 int ptrace_readdata(pid_t target_pid,unsigned char* src,unsigned char*buf,size_t size);
 int ptrace_writedata(pid_t target_pid,unsigned char* dest,unsigned char* data,size_t size);
-unsigned long int ptrace_retval(struct user_regs_struct * regs);
-int ptrace_call_wrapper(pid_t target_pid, const char * func_name, unsigned long int func_addr, unsigned long int* parameters, int param_num, struct user_regs_struct * regs);
+unsigned long int ptrace_retval(struct glibc_regs * regs);
+int ptrace_call_wrapper(pid_t target_pid, const char * func_name, unsigned long int func_addr, unsigned long int* parameters, int param_num, struct glibc_regs * regs);
 
 #endif

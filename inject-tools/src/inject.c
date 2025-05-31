@@ -274,7 +274,7 @@ int injectProcess(pid_t target_pid,const char* libcname,const char* InjectlibPat
     unsigned char errorbuf[128] = {0};
     unsigned char* errorrc = NULL;
     unsigned long int hook_entry_addr = 0;
-    struct user_regs_struct regs, original_regs;
+    struct glibc_regs regs, original_regs;
 
     int major = 0;
     int minor = 0;
@@ -547,32 +547,4 @@ int main(int argc, char** argv)
 
     return  0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
