@@ -52,6 +52,36 @@ OBJCOPY = $(TOOLS)objcopy
 OBJDUMP = $(TOOLS)objdump
 SIZE = $(TOOLS)size
 
+define GCC_GLIBC_VERSION 
+$(shell \
+	{ \
+	echo "#include <stdio.h>"; \
+	echo "int major = __GLIBC__;"; \
+	echo "int minor = __GLIBC_MINOR__;"; \
+	echo "void main(void) { return; }"; \
+	} | $(CC) -S -x c -o - - 2>/dev/null | \
+	( \
+	MAJOR=0; MINOR=0; \
+	grep -A1 -E 'major:|minor:' | \
+	awk '/\.word/ { \
+		if (state == 0) { MAJOR=$$NF; state=1 } \
+		else if (state == 1) { MINOR=$$NF; state=2 } \
+	} \
+	END { printf "GLIBC_MAJOR=%s\nGLIBC_MINOR=%s\n", MAJOR, MINOR }' \
+	) \
+)
+endef
+
+GLIBC_VERS := $(GCC_GLIBC_VERSION)
+GLIBC_MAJOR := $(patsubst GLIBC_MAJOR=%,%,$(filter GLIBC_MAJOR=%,$(GLIBC_VERS)))
+GLIBC_MINOR := $(patsubst GLIBC_MINOR=%,%,$(filter GLIBC_MINOR=%,$(GLIBC_VERS)))
+
+$(info )
+$(info === Glibc Version Detection ===)
+$(info GLIBC version: $(GLIBC_MAJOR).$(GLIBC_MINOR))
+$(info ===============================)
+$(info )
+
 CFLAGS += $(CFLAGS_COMMON)
 LDFLAGS += 
 
@@ -87,20 +117,21 @@ DEMO_LIBRARY_INCLUDES = $(foreach dir, $(DEMO_LIBRARY_INCLUDE), -I$(dir))
 .PHONY: all clean
 
 all: $(INJECT_ELF_NAME) $(DEMO_TARGET_ELF_NAME) $(DEMO_LIBRARY_NAME)
+
 ##############################################################
 $(DEMO_LIBRARY_NAME):$(DEMO_LIBRARY_OBJS)
 	$(CC) -shared -o $@ $^
 	@echo $(THREADX_LIB) has been created
 ##############################################################
 $(INJECT_ELF_NAME):$(INJECT_TOOL_OBJS)
-	$(LD) $(INJECT_TOOL_OBJS) $(LDFLAGS) -o $@ -Wl,-Map,$(INJECT_MAP_NAME) -ldl
+	$(LD) $(INJECT_TOOL_OBJS) $(LDFLAGS) -o $@ -Wl,-Map,$(INJECT_MAP_NAME)
 	@echo $(INJECT_ELF_NAME) has been created
 $(INJECT_DIS_NAME):$(INJECT_ELF_NAME)
 	@$(OBJDUMP) -h -d $< > $@
 	@echo $(INJECT_DIS_NAME) has been created
 ##############################################################
 $(DEMO_TARGET_ELF_NAME):$(DEMO_TARGET_OBJS)
-	$(LD) $(DEMO_TARGET_OBJS) $(LDFLAGS) -o $@ -Wl,-Map,$(DEMO_TARGET_MAP_NAME) -lpthread
+	$(LD) $(DEMO_TARGET_OBJS) $(LDFLAGS) -o $@ -Wl,-Map,$(DEMO_TARGET_MAP_NAME) -no-pie
 	@echo $(DEMO_TARGET_ELF_NAME) has been created
 $(DEMO_TARGET_DIS_NAME):$(DEMO_TARGET_ELF_NAME)
 	@$(OBJDUMP) -h -d $< > $@
