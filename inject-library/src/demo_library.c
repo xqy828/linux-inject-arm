@@ -63,6 +63,7 @@ pi@raspberrypi:~/workspace/ptrace $
 
 __attribute__((constructor)) void init()
 {
+#if 0    
     unsigned long int address = 0;
 
     address = get_global_variable_address("/home/target","custom_func_ptr");
@@ -91,6 +92,8 @@ __attribute__((constructor)) void init()
     mprotect((void*)aligned_addr, page_size, PROT_READ);
 */
     printf("Hook installed: custom_func_ptr redirected new func address:0x%lx\n",(unsigned long int)new_func);
+#endif
+    printf("Hooked function auto start\n");
 }
 
 __attribute__((destructor)) void cleanup()
@@ -102,7 +105,8 @@ __attribute__((destructor)) void cleanup()
     }
 }
 
-int hook_entry(char * a){
+int hook_entry(char * a)
+{
     printf("Hook success, pid = %d\n", getpid());
     printf("Hello %s\n", a);
     return 0;
