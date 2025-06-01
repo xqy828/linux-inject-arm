@@ -27,11 +27,11 @@ make PLATFORM=ARM clean
 
 ### Execute
 
-. /inject -n `<process name>` `<dynamic library path>` # Inject by process name   
+. /inject -n `<process name>` `<target process libc name>`  `<dynamic library path>` # Inject by process name   
 or   
-. /inject -p `<PID>` `<dynamic library path>` # Inject by PID   
+. /inject -p `<PID>` `<target process libc name>` `<dynamic library path>` # Inject by PID   
 eg:   
-./Inject.out -p 44361 ./demo_library.so   
+./Inject.out -p 740 libc-2.26.so ./demo_library.so   
 
 ## TEST
 
@@ -239,6 +239,72 @@ Hello hello hook
 [root@imx6q ~]# Original function called
 Original function called
 
+```
+### Xilinx Zynq 7010
+#### OS 
+```js
+[root@zynq ~]# uname -a
+Linux zynq 5.4.0-xilinx #1 SMP PREEMPT Thu Jan 4 00:09:30 UTC 2024 armv7l GNU/Linux
+[root@zynq ~]# 
+
+[root@zynq ~]# /lib/libc.so.6 
+GNU C Library (GNU libc) stable release version 2.26, by Roland McGrath et al.
+Copyright (C) 2017 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.
+There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.
+Compiled by GNU CC version 7.3.1 20180314.
+Available extensions:
+	crypt add-on version 2.1 by Michael Glad and others
+	GNU Libidn by Simon Josefsson
+	Native POSIX Threads Library by Ulrich Drepper et al
+	BIND-8.2.3-T5B
+libc ABIs: UNIQUE
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/libc/bugs.html>.
+[root@zynq ~]# 
+
+```
+#### TEST log
+```js
+[root@zynq ~]# ./demo_process.out &
+[root@zynq ~]# Original function called
+[root@zynq ~]# 
+[root@zynq ~]# ./Inject.out -p 740 libc-2.26.so ./demo_library.so
+[-[+]-]:main-(00515)]Compiled with glibc: 2.26
+[-[+]-]:main-(00516)]Running on glibc: 2.26
+[-[+]-]:main-(00539)]Target process pid 740
+[-[+]-]:main-(00547)]Inject library /root/demo_library.so
+[-[+]-]:injectProcess-(00287)]Injecting process: 740
+[-[+]-]:getTargetProcessLibcFuncAddr-(00246)]local libc-2.26.so[0xb6dae000], target libc-2.26.so[0xb6d8e000],funcAddrOffset 830652 target LibcFuncAddr[0xb6e58cbc]
+[-[+]-]:injectProcess-(00290)]Target process mmap address: 0xb6e58cbc
+[-[+]-]:injectProcess-(00301)]Running GLIBC version: 2.26.0
+[-[+]-]:getTargetProcessLibcFuncAddr-(00246)]local libc-2.26.so[0xb6dae000], target libc-2.26.so[0xb6d8e000],funcAddrOffset 1076516 target LibcFuncAddr[0xb6e94d24]
+[-[+]-]:getTargetProcessLibcFuncAddr-(00246)]local libc-2.26.so[0xb6dae000], target libc-2.26.so[0xb6d8e000],funcAddrOffset 1076612 target LibcFuncAddr[0xb6e94d84]
+[-[+]-]:getTargetProcessLibcFuncAddr-(00246)]local libc-2.26.so[0xb6dae000], target libc-2.26.so[0xb6d8e000],funcAddrOffset 1076732 target LibcFuncAddr[0xb6e94dfc]
+[-[+]-]:getTargetProcessLibcFuncAddr-(00246)]local libc-2.26.so[0xb6dae000], target libc-2.26.so[0xb6d8e000],funcAddrOffset 1310488 target LibcFuncAddr[0xb6ecdf18]
+[-[+]-]:injectProcess-(00387)]Get imports: dlopen: 0xb6e94d24, dlsym: 0xb6e94d84, dlclose: 0xb6e94dfc, dlerror: 0xb6ecdf18
+[-[+]-]:injectProcess-(00388)]library path = /root/demo_library.so
+[-[+]-]:ptrace_call_wrapper-(00212)]Calling mmap in target process.
+[-[+]-]:ptrace_call_wrapper-(00219)]Target process returned from mmap, return value=b6f5e000, pc=0 
+[-[+]-]:injectProcess-(00407)]Target process after mmap map_base = 0xb6f5e000
+[-[+]-]:ptrace_call_wrapper-(00212)]Calling __libc_dlopen_mode/dlopen in target process.
+Hooked function auto start
+[-[+]-]:ptrace_call_wrapper-(00219)]Target process returned from __libc_dlopen_mode/dlopen, return value=23178, pc=0 
+[-[+]-]:injectProcess-(00435)]"/root/demo_library.so" successfully injected
+[-[+]-]:ptrace_call_wrapper-(00212)]Calling __libc_dlsym/dlsym in target process.
+[-[+]-]:ptrace_call_wrapper-(00219)]Target process returned from __libc_dlsym/dlsym, return value=b6d7c9c0, pc=0 
+[-[+]-]:injectProcess-(00468)]hook_entry_addr = b6d7c9c0
+[-[+]-]:ptrace_call_wrapper-(00212)]Calling hook_entry in target process.
+Hook success, pid = 740
+Hello hello hook
+[-[+]-]:ptrace_call_wrapper-(00219)]Target process returned from hook_entry, return value=0, pc=0 
+[-[+]-]:injectProcess-(00479)]Press enter to dlclose and detach
+
+[-[+]-]:ptrace_call_wrapper-(00212)]Calling __libc_dlclose/dlclose in target process.
+[-[+]-]:ptrace_call_wrapper-(00219)]Target process returned from __libc_dlclose/dlclose, return value=0, pc=0 
+[root@zynq ~]# Original function called
+Original function called
 ```
 
 
