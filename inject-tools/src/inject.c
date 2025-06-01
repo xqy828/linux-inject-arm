@@ -24,7 +24,7 @@ extern char *__dlerror (void);
 
 static void usage(char* name)
 {
-    disp("usage: %s [-n process-name] [-p pid] [library-to-inject]\n", name);
+    disp("usage: %s [-n process-name] [-p pid] [target process libc.so] [library-to-inject]\n", name);
 }
 
 int compare_glibc_versions(int major1, int minor1, int major2, int minor2) 
@@ -206,7 +206,7 @@ unsigned long int getLibcFuncAddr(char* funcName)
     void* selfhandle = NULL; 
     void* funcAddr  = NULL;
     //selfhandle = dlopen("libc.so.6", RTLD_LAZY);
-    selfhandle = dlopen(libc_name, RTLD_LAZY);
+    selfhandle = dlopen(NULL, RTLD_LAZY);
     if(selfhandle == NULL)
     {
         disp("Error loading libc.so.6: %s\n",dlerror());
@@ -321,7 +321,7 @@ GLIBC 2.34 Major new features:
         local_dlopenAddr = getLibcFuncAddr("__libc_dlopen_mode");
         local_dlsymAddr = getLibcFuncAddr("__libc_dlsym");
         local_dlcloseAddr = getLibcFuncAddr("__libc_dlclose");
-        local_dlerrorAddr = getLibcFuncAddr("__dlerror");
+        local_dlerrorAddr = getLibcFuncAddr("dlerror");
         if((local_dlopenAddr == 0)|| 
             (local_dlsymAddr == 0) ||
             (local_dlcloseAddr == 0) ||
@@ -498,16 +498,18 @@ int main(int argc, char** argv)
     char* InjectlibName =NULL;
     char* InjectlibPath = NULL;
     char* TargetProcessName = NULL;
+    char* LibcName = NULL;
     pid_t TargetProcessPid = -1;
     int rc = -1;
-    if(argc < 4)
+    if(argc < 5)
     {
         usage(argv[0]);
         return 1;
     }
     command = argv[1];
     commandArg = argv[2];
-    InjectlibName = argv[3];
+    LibcName = argv[3];
+    InjectlibName = argv[4];
     InjectlibPath = realpath(InjectlibName, NULL);
 
     disp(COLOR_GREEN"Compiled with glibc: %d.%d\n"COLOR_NONE, __GLIBC__, __GLIBC_MINOR__);
@@ -543,7 +545,8 @@ int main(int argc, char** argv)
     }
 
     disp(COLOR_GREEN"Inject library %s\n"COLOR_NONE,InjectlibPath);
-    rc = injectProcess(TargetProcessPid,libc_name,InjectlibPath,"hook_entry","hello hook");
+
+    rc = injectProcess(TargetProcessPid,LibcName,InjectlibPath,"hook_entry","hello hook");
 
     return  0;
 }
