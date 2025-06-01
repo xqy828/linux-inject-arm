@@ -82,6 +82,12 @@ $(info GLIBC version: $(GLIBC_MAJOR).$(GLIBC_MINOR))
 $(info ===============================)
 $(info )
 
+GLIBC_NUM := $(shell expr $(GLIBC_MAJOR) \* 100 + $(GLIBC_MINOR) 2>/dev/null)
+
+ifneq ($(shell expr $(GLIBC_NUM) \> 234),1)
+   INJECT_TOOL_LDFLAGS += -ldl
+endif
+
 CFLAGS += $(CFLAGS_COMMON)
 LDFLAGS += 
 
@@ -124,7 +130,7 @@ $(DEMO_LIBRARY_NAME):$(DEMO_LIBRARY_OBJS)
 	@echo $(THREADX_LIB) has been created
 ##############################################################
 $(INJECT_ELF_NAME):$(INJECT_TOOL_OBJS)
-	$(LD) $(INJECT_TOOL_OBJS) $(LDFLAGS) -o $@ -Wl,-Map,$(INJECT_MAP_NAME)
+	$(LD) $(INJECT_TOOL_OBJS) $(LDFLAGS) $(INJECT_TOOL_LDFLAGS) -o $@ -Wl,-Map,$(INJECT_MAP_NAME)
 	@echo $(INJECT_ELF_NAME) has been created
 $(INJECT_DIS_NAME):$(INJECT_ELF_NAME)
 	@$(OBJDUMP) -h -d $< > $@
